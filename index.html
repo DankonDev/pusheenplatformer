@@ -2,7 +2,9 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Wertykalny Platformer - Urodziny</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,19 +17,23 @@
             padding: 0;
             box-sizing: border-box;
         }
-        body {
+        html, body {
+            width: 100%;
+            height: 100%;
+            position: fixed; 
+            top: 0;
+            left: 0;
             background-color: #111;
             overflow: hidden; 
             touch-action: none; 
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
             font-family: 'Press Start 2P', cursive;
         }
         canvas {
-            max-width: 100vw;
-            max-height: 100vh;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain; 
             background-color: #000;
         }
@@ -46,7 +52,6 @@
     canvas.width = GAME_WIDTH;
     canvas.height = GAME_HEIGHT;
 
-    // Ładowanie grafik
     const bgImage = new Image(); bgImage.src = 'background.png';
     const platformLower = new Image(); platformLower.src = 'platform_lower.png';
     const platformDirt = new Image(); platformDirt.src = 'platform_dirt.png';
@@ -63,10 +68,8 @@
     let score = 0;
     const GOAL_SCORE = 100;
 
-    // ZMIANA: Zaczynamy od stanu 'start' zamiast 'playing'
     let gameState = 'start'; 
     
-    // Zmienne do sekwencji końcowej
     let winTime = 0;
     let winPhase = 0; 
     let clickedPresentIndex = -1;
@@ -205,16 +208,17 @@
         ctx.fillRect(x + 2*s, y + 3*s, s, s);
     }
 
-    // Funkcja wywołująca pełny ekran
     function requestFullScreen() {
         const elem = document.documentElement;
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(err => console.log(err));
-        } else if (elem.webkitRequestFullscreen) { /* Safari */
-            elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) { /* IE11 */
-            elem.msRequestFullscreen();
-        }
+        try {
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => {});
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        } catch(e) {}
     }
 
     function handleInputStart(clientX, clientY) {
@@ -225,19 +229,17 @@
         const clickX = (clientX - rect.left) * scaleX;
         const clickY = (clientY - rect.top) * scaleY;
 
-        // EKRAN STARTOWY
         if (gameState === 'start') {
             const btnW = 260, btnH = 60;
             const btnX = GAME_WIDTH / 2 - btnW / 2;
             const btnY = GAME_HEIGHT / 2 + 100;
 
-            // Jeśli kliknięto przycisk "START"
             if (clickX >= btnX && clickX <= btnX + btnW && clickY >= btnY && clickY <= btnY + btnH) {
-                requestFullScreen();
+                requestFullScreen(); 
                 gameState = 'playing';
-                player.vy = player.jumpStrength; // Wymuszamy pierwszy skok
+                player.vy = player.jumpStrength; 
             }
-            return; // Zatrzymujemy sprawdzanie reszty
+            return; 
         }
 
         if (gameState === 'win') {
@@ -294,7 +296,6 @@
     window.addEventListener('mouseup', handleInputEnd);
 
     function update() {
-        // Jeśli jesteśmy w menu głównym, nie aktualizujemy fizyki gry
         if (gameState === 'start') return;
 
         const now = Date.now();
@@ -367,8 +368,6 @@
             player.x = GAME_WIDTH / 2 - player.width / 2;
             player.vy = 0;
             totalScroll = 0; score = 0; particles = []; heartParticles = [];
-            
-            // ZMIANA: Po porażce wracamy od razu do gry, a nie do menu
             gameState = 'playing';
             initPlatforms();
             player.vy = player.jumpStrength; 
@@ -378,7 +377,6 @@
     function draw() {
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-        // --- TŁO ---
         if (bgImage.complete && bgImage.naturalWidth !== 0) {
             if (winPhase === 5) {
                 const scale = Math.max(GAME_WIDTH / bgImage.naturalWidth, GAME_HEIGHT / bgImage.naturalHeight);
@@ -441,7 +439,7 @@
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
-        if (gameState === 'playing' || gameState === 'start') {
+        if (gameState === 'playing') {
             ctx.fillStyle = 'white';
             ctx.font = '36px "Press Start 2P"';
             ctx.textAlign = 'center';
@@ -451,13 +449,10 @@
             ctx.shadowColor = "transparent";
         }
 
-        // --- EKRAN STARTOWY / INSTRUKCJA ---
         if (gameState === 'start') {
-            // Przyciemnienie tła
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-            // Napisy
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
             ctx.shadowColor = "black";
@@ -467,39 +462,37 @@
             ctx.fillText("JAK GRAC?", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120);
 
             ctx.font = '12px "Press Start 2P"';
-            // Lewa strona
-            ctx.fillStyle = '#87CEEB'; // Jasnoniebieski dla wyróżnienia
+            ctx.fillStyle = '#87CEEB'; 
             ctx.fillText("Dotknij LEWEJ polowy", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
             ctx.fillStyle = 'white';
             ctx.fillText("aby isc w LEWO", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 15);
 
-            // Prawa strona
-            ctx.fillStyle = '#ffb6c1'; // Różowy dla wyróżnienia
+            ctx.fillStyle = '#ffb6c1'; 
             ctx.fillText("Dotknij PRAWEJ polowy", GAME_WIDTH / 2, GAME_HEIGHT / 2 + 35);
             ctx.fillStyle = 'white';
             ctx.fillText("aby isc w PRAWO", GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60);
 
             ctx.shadowColor = "transparent";
 
-            // Przycisk Start
             const btnW = 260, btnH = 60;
             const btnX = GAME_WIDTH / 2 - btnW / 2;
             const btnY = GAME_HEIGHT / 2 + 100;
 
-            ctx.fillStyle = '#4CAF50'; // Zielony
+            ctx.fillStyle = '#4CAF50'; 
             ctx.fillRect(btnX, btnY, btnW, btnH);
             ctx.strokeStyle = '#FFFFFF'; 
             ctx.lineWidth = 4; 
             ctx.strokeRect(btnX, btnY, btnW, btnH);
 
             ctx.fillStyle = 'white';
-            ctx.font = '12px "Press Start 2P"';
-            ctx.fillText("START", GAME_WIDTH / 2, btnY + 25);
-            ctx.font = '10px "Press Start 2P"';
-            ctx.fillText("(PELNY EKRAN)", GAME_WIDTH / 2, btnY + 45);
+            ctx.font = '16px "Press Start 2P"';
+            ctx.fillText("START", GAME_WIDTH / 2, btnY + 38);
+
+            ctx.font = '8px "Press Start 2P"';
+            ctx.fillText("Safari: Dodaj do ekranu poczatkowego", GAME_WIDTH / 2, btnY + 85);
+            ctx.fillText("aby grac na 100% pelnym ekranie!", GAME_WIDTH / 2, btnY + 100);
         }
 
-        // --- EKRAN ZWYCIĘSTWA (Fazy 0-4) ---
         if (gameState === 'win') {
             particles.forEach(p => {
                 ctx.globalAlpha = Math.max(0, p.life);
@@ -620,7 +613,6 @@
     }
 
     initPlatforms();
-    // Start pętli natychmiast, żeby narysować ekran "Start", usunąłem wcześniejsze przypisanie skoku (jumpStrength), by postać nie poleciała sama do góry.
     setTimeout(() => {
         gameLoop();
     }, 500);
