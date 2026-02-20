@@ -46,7 +46,7 @@
     canvas.width = GAME_WIDTH;
     canvas.height = GAME_HEIGHT;
 
-    // �adowanie grafik
+    // Ładowanie grafik
     const bgImage = new Image(); bgImage.src = 'background.png';
     const platformLower = new Image(); platformLower.src = 'platform_lower.png';
     const platformDirt = new Image(); platformDirt.src = 'platform_dirt.png';
@@ -63,11 +63,11 @@
     let score = 0;
     const GOAL_SCORE = 100;
 
-    let gameState = 'playing'; 
+    // ZMIANA: Zaczynamy od stanu 'start' zamiast 'playing'
+    let gameState = 'start'; 
     
-    // Zmienne do sekwencji ko�cowej
+    // Zmienne do sekwencji końcowej
     let winTime = 0;
-    // Fazy: 0=napis, 1=prezenty, 2=trzesienie, 3=bransoletka, 4=pokazanie innych, 5=finisz mi�osny
     let winPhase = 0; 
     let clickedPresentIndex = -1;
     let shakeStartTime = 0;
@@ -205,6 +205,17 @@
         ctx.fillRect(x + 2*s, y + 3*s, s, s);
     }
 
+    // Funkcja wywołująca pełny ekran
+    function requestFullScreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.log(err));
+        } else if (elem.webkitRequestFullscreen) { /* Safari */
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { /* IE11 */
+            elem.msRequestFullscreen();
+        }
+    }
 
     function handleInputStart(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
@@ -213,6 +224,21 @@
         
         const clickX = (clientX - rect.left) * scaleX;
         const clickY = (clientY - rect.top) * scaleY;
+
+        // EKRAN STARTOWY
+        if (gameState === 'start') {
+            const btnW = 260, btnH = 60;
+            const btnX = GAME_WIDTH / 2 - btnW / 2;
+            const btnY = GAME_HEIGHT / 2 + 100;
+
+            // Jeśli kliknięto przycisk "START"
+            if (clickX >= btnX && clickX <= btnX + btnW && clickY >= btnY && clickY <= btnY + btnH) {
+                requestFullScreen();
+                gameState = 'playing';
+                player.vy = player.jumpStrength; // Wymuszamy pierwszy skok
+            }
+            return; // Zatrzymujemy sprawdzanie reszty
+        }
 
         if (gameState === 'win') {
             const now = Date.now();
@@ -268,6 +294,9 @@
     window.addEventListener('mouseup', handleInputEnd);
 
     function update() {
+        // Jeśli jesteśmy w menu głównym, nie aktualizujemy fizyki gry
+        if (gameState === 'start') return;
+
         const now = Date.now();
 
         if (gameState === 'win') {
@@ -338,6 +367,8 @@
             player.x = GAME_WIDTH / 2 - player.width / 2;
             player.vy = 0;
             totalScroll = 0; score = 0; particles = []; heartParticles = [];
+            
+            // ZMIANA: Po porażce wracamy od razu do gry, a nie do menu
             gameState = 'playing';
             initPlatforms();
             player.vy = player.jumpStrength; 
@@ -347,10 +378,9 @@
     function draw() {
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-        // --- T�O ---
+        // --- TŁO ---
         if (bgImage.complete && bgImage.naturalWidth !== 0) {
             if (winPhase === 5) {
-                // ZMIANA: U�ywamy Math.max, aby wype�ni� ca�y ekran (cover)
                 const scale = Math.max(GAME_WIDTH / bgImage.naturalWidth, GAME_HEIGHT / bgImage.naturalHeight);
                 const scaledW = bgImage.naturalWidth * scale;
                 const scaledH = bgImage.naturalHeight * scale;
@@ -411,8 +441,7 @@
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
-
-        if (gameState !== 'win') {
+        if (gameState === 'playing' || gameState === 'start') {
             ctx.fillStyle = 'white';
             ctx.font = '36px "Press Start 2P"';
             ctx.textAlign = 'center';
@@ -422,6 +451,55 @@
             ctx.shadowColor = "transparent";
         }
 
+        // --- EKRAN STARTOWY / INSTRUKCJA ---
+        if (gameState === 'start') {
+            // Przyciemnienie tła
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // Napisy
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = "black";
+            ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+            
+            ctx.font = '30px "Press Start 2P"';
+            ctx.fillText("JAK GRAC?", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120);
+
+            ctx.font = '12px "Press Start 2P"';
+            // Lewa strona
+            ctx.fillStyle = '#87CEEB'; // Jasnoniebieski dla wyróżnienia
+            ctx.fillText("Dotknij LEWEJ polowy", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
+            ctx.fillStyle = 'white';
+            ctx.fillText("aby isc w LEWO", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 15);
+
+            // Prawa strona
+            ctx.fillStyle = '#ffb6c1'; // Różowy dla wyróżnienia
+            ctx.fillText("Dotknij PRAWEJ polowy", GAME_WIDTH / 2, GAME_HEIGHT / 2 + 35);
+            ctx.fillStyle = 'white';
+            ctx.fillText("aby isc w PRAWO", GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60);
+
+            ctx.shadowColor = "transparent";
+
+            // Przycisk Start
+            const btnW = 260, btnH = 60;
+            const btnX = GAME_WIDTH / 2 - btnW / 2;
+            const btnY = GAME_HEIGHT / 2 + 100;
+
+            ctx.fillStyle = '#4CAF50'; // Zielony
+            ctx.fillRect(btnX, btnY, btnW, btnH);
+            ctx.strokeStyle = '#FFFFFF'; 
+            ctx.lineWidth = 4; 
+            ctx.strokeRect(btnX, btnY, btnW, btnH);
+
+            ctx.fillStyle = 'white';
+            ctx.font = '12px "Press Start 2P"';
+            ctx.fillText("START", GAME_WIDTH / 2, btnY + 25);
+            ctx.font = '10px "Press Start 2P"';
+            ctx.fillText("(PELNY EKRAN)", GAME_WIDTH / 2, btnY + 45);
+        }
+
+        // --- EKRAN ZWYCIĘSTWA (Fazy 0-4) ---
         if (gameState === 'win') {
             particles.forEach(p => {
                 ctx.globalAlpha = Math.max(0, p.life);
@@ -542,8 +620,8 @@
     }
 
     initPlatforms();
+    // Start pętli natychmiast, żeby narysować ekran "Start", usunąłem wcześniejsze przypisanie skoku (jumpStrength), by postać nie poleciała sama do góry.
     setTimeout(() => {
-        player.vy = player.jumpStrength; 
         gameLoop();
     }, 500);
 
